@@ -1,0 +1,89 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Heart, Menu, Minus, Plus, Search, ShoppingBag, SlidersHorizontal, X } from 'lucide-react';
+import './styles.css';
+
+const products = [
+  { id: 1, name: 'The Everyday Blazer', category: 'Clothing', type: 'Outerwear', price: 248, color: 'Chocolate', shade: '#625145', badge: 'Bestseller', image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=900&q=85', desc: 'A softly structured layer in a recycled wool blend. Cut for an easy, considered fit.' },
+  { id: 2, name: 'Soft Form Knit', category: 'Knitwear', type: 'Knitwear', price: 168, color: 'Oatmeal', shade: '#d8cabb', badge: 'New', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=900&q=85', desc: 'A breathable, softly brushed knit with a relaxed shape and refined rib detailing.' },
+  { id: 3, name: 'The Column Trouser', category: 'Clothing', type: 'Trousers', price: 188, color: 'Stone', shade: '#b8aa98', badge: '', image: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=900&q=85', desc: 'A fluid, full-length trouser with a clean front and softly tailored drape.' },
+  { id: 4, name: 'Weekend Tote', category: 'Accessories', type: 'Accessories', price: 98, color: 'Natural', shade: '#d1bd9d', badge: '', image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=900&q=85', desc: 'An everyday carryall made from sturdy organic cotton canvas with a roomy interior.' },
+  { id: 5, name: 'Linen Sunday Shirt', category: 'Clothing', type: 'Tops', price: 138, color: 'Cloud', shade: '#e8e3dc', badge: 'Low impact', image: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=900&q=85', desc: 'An airy, responsibly sourced linen shirt designed to be worn loose or layered.' },
+  { id: 6, name: 'Everyday Layer Coat', category: 'Clothing', type: 'Outerwear', price: 328, color: 'Olive', shade: '#777763', badge: '', image: 'https://images.unsplash.com/photo-1544923246-77307dd654cb?auto=format&fit=crop&w=900&q=85', desc: 'A timeless, light wool coat with considered proportions and a quietly sculptural line.' },
+  { id: 7, name: 'Ribbed Tank, Set of 2', category: 'Clothing', type: 'Tops', price: 76, color: 'Ivory', shade: '#e5dece', badge: '', image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=85', desc: 'Two everyday essentials in a soft, substantial organic cotton rib.' },
+  { id: 8, name: 'The Soft Scarf', category: 'Accessories', type: 'Accessories', price: 112, color: 'Warm Grey', shade: '#aaa69d', badge: 'New', image: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=900&q=85', desc: 'A generous, feather-light layer woven from traceable merino wool.' },
+];
+const money = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+
+function App() {
+  const [active, setActive] = useState('All pieces');
+  const [sort, setSort] = useState('Featured');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [bagOpen, setBagOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState(null);
+  const [size, setSize] = useState('M');
+  const [added, setAdded] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [bag, setBag] = useState(() => { try { return JSON.parse(localStorage.getItem('forme-bag') || '[]'); } catch { return []; } });
+  const [saved, setSaved] = useState([]);
+  useEffect(() => { localStorage.setItem('forme-bag', JSON.stringify(bag)); }, [bag]);
+  const categories = ['All pieces', 'Clothing', 'Knitwear', 'Tops', 'Trousers', 'Outerwear', 'Accessories'];
+  const visible = useMemo(() => {
+    let result = products.filter(p => (active === 'All pieces' || p.category === active || p.type === active) && (!query || `${p.name} ${p.category} ${p.color}`.toLowerCase().includes(query.toLowerCase())));
+    if (sort === 'Price: low to high') result = [...result].sort((a,b) => a.price - b.price);
+    if (sort === 'Price: high to low') result = [...result].sort((a,b) => b.price - a.price);
+    if (sort === 'Newest') result = [...result].reverse();
+    return result;
+  }, [active, sort, query]);
+  const bagCount = bag.reduce((sum, item) => sum + item.qty, 0);
+  const subtotal = bag.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const announce = text => { setNotice(text); setTimeout(() => setNotice(''), 2200); };
+  const addToBag = (product, chosenSize = size) => {
+    setBag(current => { const key = `${product.id}-${chosenSize}`; const existing = current.find(item => item.key === key); return existing ? current.map(item => item.key === key ? { ...item, qty: item.qty + 1 } : item) : [...current, { ...product, key, size: chosenSize, qty: 1 }]; });
+    setAdded(true); setTimeout(() => setAdded(false), 1800); announce(`${product.name} added to your bag`);
+  };
+  const changeQty = (key, delta) => setBag(current => current.map(item => item.key === key ? { ...item, qty: item.qty + delta } : item).filter(item => item.qty > 0));
+  const toggleSaved = id => setSaved(current => current.includes(id) ? current.filter(i => i !== id) : [...current, id]);
+  const scrollToShop = () => { document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' }); setActive('All pieces'); };
+  const openProduct = p => { setSelected(p); setSize('M'); setAdded(false); };
+
+  return <>
+    <div className="announcement">A softer way to get dressed <span>·</span> Free shipping on orders over $150 <ArrowRight size={13}/></div>
+    <header className="header">
+      <button className="icon-btn mobile-toggle" aria-label="Open menu" onClick={() => setMobileMenu(!mobileMenu)}><Menu size={21}/></button>
+      <nav className={`nav-left ${mobileMenu ? 'nav-open' : ''}`}><a href="#shop" onClick={() => {setActive('All pieces');setMobileMenu(false)}}>Shop all</a><a href="#collections" onClick={() => setMobileMenu(false)}>Collections</a><a href="#story" onClick={() => setMobileMenu(false)}>Our approach</a></nav>
+      <a href="#top" className="wordmark" aria-label="Forme Studio home"><span className="mark">f.</span>forme<span className="studio">studio</span></a>
+      <div className="nav-right"><button className="text-button search-trigger" onClick={() => setSearchOpen(!searchOpen)}><Search size={17}/><span>Search</span></button><button className="icon-btn bag-trigger" aria-label={`Shopping bag, ${bagCount} items`} onClick={() => setBagOpen(true)}><ShoppingBag size={19}/><span className="bag-count">{bagCount}</span></button></div>
+    </header>
+    {searchOpen && <div className="searchbar"><Search size={17}/><input autoFocus placeholder="Search pieces, colours, collections…" value={query} onChange={e => { setQuery(e.target.value); document.getElementById('shop')?.scrollIntoView({behavior:'smooth'}); }}/><button className="icon-btn" onClick={() => {setSearchOpen(false);setQuery('')}}><X size={18}/></button></div>}
+    <main id="top">
+      <section className="hero">
+        <img className="hero-image" src="/manus-storage/async-images/4fw3tiM9yxGuhOpOewRJu9/image-1.webp" alt="Forme Studio spring collection campaign" onError={e => {e.currentTarget.style.display='none'}}/>
+        <div className="hero-backup" aria-hidden="true"></div>
+        <div className="hero-copy"><span className="eyebrow light">A little more room to breathe</span><h1>Get dressed.<br/><em>Feel like yourself.</em></h1><p>Considered pieces for wherever the day takes you.</p><button className="button button-light" onClick={scrollToShop}>Shop the collection <ArrowRight size={15}/></button></div>
+        <div className="hero-credit">THE SPRING EDIT <span>—</span> 01 / 03</div><div className="hero-pagination"><span className="active-dot"></span><span></span><span></span></div>
+      </section>
+      <section className="intro" id="story"><div className="intro-label"><span className="eyebrow">Less, but considered</span><span className="intro-line"></span></div><h2>Good clothes make<br/>room for <em>living.</em></h2><p>Thoughtful materials. Easy shapes. Pieces you’ll reach for, again and again. Made with care, never in a hurry.</p><a className="underlink" href="#approach">A little about us <ArrowUpRight size={14}/></a></section>
+      <section className="collections" id="collections"><div className="section-heading"><div><span className="eyebrow">A place for every day</span><h2>Find your <em>form.</em></h2></div><a className="underlink" href="#shop" onClick={() => setActive('All pieces')}>Explore all <ArrowRight size={15}/></a></div><div className="collection-grid">
+        <button className="collection-card collection-tall" onClick={() => {setActive('All pieces');scrollToShop()}}><img src="/manus-storage/async-images/4fw3tiM9yxGuhOpOewRJu9/image-2.webp" alt="Model in tailored Forme Studio pieces"/><div className="collection-backup backup-one"></div><span className="collection-name">The everyday edit <span>12 pieces</span></span><span className="circle-arrow"><ArrowUpRight size={17}/></span></button>
+        <button className="collection-card collection-short" onClick={() => {setActive('Knitwear');document.getElementById('shop')?.scrollIntoView({behavior:'smooth'})}}><img src="/manus-storage/async-images/4fw3tiM9yxGuhOpOewRJu9/image-3.webp" alt="Soft knitwear styled for everyday"/><div className="collection-backup backup-two"></div><span className="collection-name">Soft things <span>08 pieces</span></span><span className="circle-arrow"><ArrowUpRight size={17}/></span></button>
+        <button className="collection-card collection-tall collection-third" onClick={() => {setActive('Accessories');document.getElementById('shop')?.scrollIntoView({behavior:'smooth'})}}><img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=85" alt="Modern clothing, styled simply"/><span className="collection-name">Made to move <span>10 pieces</span></span><span className="circle-arrow"><ArrowUpRight size={17}/></span></button>
+      </div></section>
+      <section className="shop-section" id="shop"><div className="shop-heading"><div><span className="eyebrow">The good stuff</span><h2>Pieces to <em>keep.</em></h2></div><div className="shop-meta"><span>{visible.length} pieces</span><button className="sort-button" onClick={() => setSortOpen(!sortOpen)}><SlidersHorizontal size={15}/>{sort}<ChevronDown size={14}/></button>{sortOpen && <div className="sort-menu">{['Featured','Newest','Price: low to high','Price: high to low'].map(item => <button key={item} onClick={() => {setSort(item);setSortOpen(false)}}>{item}{sort===item && <Check size={14}/>}</button>)}</div>}</div></div>
+        <div className="category-list">{categories.map(item => <button key={item} className={active===item?'category-active':''} onClick={() => setActive(item)}>{item}</button>)}</div>
+        {visible.length ? <div className="product-grid">{visible.map(p => <article className="product-card" key={p.id}><div className="product-photo" onClick={() => openProduct(p)}><img src={p.image} alt={p.name} loading="lazy"/><button className={`heart-button ${saved.includes(p.id)?'is-saved':''}`} aria-label="Save item" onClick={e => {e.stopPropagation();toggleSaved(p.id)}}><Heart size={17} fill={saved.includes(p.id)?'currentColor':'none'}/></button>{p.badge&&<span className="product-badge">{p.badge}</span>}<button className="quick-add" onClick={e => {e.stopPropagation();openProduct(p)}}>Quick add <Plus size={14}/></button></div><div className="product-info" onClick={() => openProduct(p)}><div><h3>{p.name}</h3><span>{p.color}</span></div><strong>{money(p.price)}</strong></div><div className="swatch-row"><span className="swatch" style={{background:p.shade}}></span><span className="swatch-more">+2 colours</span></div></article>)}</div> : <div className="empty-results">No pieces found. Try another category or search.</div>}
+      </section>
+      <section className="values"><div className="values-photo"><img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1300&q=85" alt="A thoughtful approach to getting dressed" loading="lazy"/></div><div className="values-copy"><span className="eyebrow">A gentler kind of fashion</span><h2>Made for the<br/><em>long way around.</em></h2><p>We work with thoughtful mills and small makers to create pieces that feel good on day one — and every day after. Because the best thing in your wardrobe is the thing you actually wear.</p><a className="underlink" href="#approach">How we make things <ArrowUpRight size={15}/></a><span className="values-index">OUR APPROACH / 001</span></div></section>
+      <section className="newsletter"><span className="eyebrow">A good note, now and then</span><h2>Stay in the <em>loop.</em></h2><p>New things, thoughtful notes, and 10% off your first order.</p><form onSubmit={e => {e.preventDefault();announce('You’re on the list — check your inbox soon!');e.currentTarget.reset()}}><input type="email" aria-label="Email address" placeholder="Your email address" required/><button aria-label="Subscribe"><ArrowRight size={18}/></button></form><span className="newsletter-note">By subscribing, you agree to our friendly emails. Unsubscribe anytime.</span></section>
+    </main>
+    <footer className="footer"><div className="footer-top"><a href="#top" className="wordmark footer-wordmark"><span className="mark">f.</span>forme<span className="studio">studio</span></a><p>Thoughtful clothes, made for real life.<br/>Designed with care. Worn on repeat.</p><div className="footer-links"><a href="#shop">Shop all</a><a href="#story">Our approach</a><a href="#footer">Shipping & returns</a><a href="#footer">Contact</a></div></div><div className="footer-bottom"><span>© 2025 Forme Studio</span><span>Made thoughtfully, worn everywhere.</span><span>Instagram&nbsp;&nbsp; Pinterest</span></div></footer>
+    {bagOpen && <div className="scrim" onClick={() => setBagOpen(false)}><aside className="bag-drawer" onClick={e => e.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">Your little collection</span><h2>Your bag <span>({bagCount})</span></h2></div><button className="icon-btn" aria-label="Close bag" onClick={() => setBagOpen(false)}><X size={20}/></button></div>{bag.length===0?<div className="bag-empty"><div className="empty-bag-icon"><ShoppingBag size={27}/></div><h3>Room for something good.</h3><p>Your bag is waiting for the pieces you love.</p><button className="button button-dark" onClick={() => {setBagOpen(false);scrollToShop()}}>Explore the collection <ArrowRight size={15}/></button></div>:<><div className="shipping-note"><span>You're close to complimentary shipping.</span><div><span></span></div><small>{money(Math.max(0,150-subtotal))} away from free shipping</small></div><div className="bag-items">{bag.map(item=><div className="bag-item" key={item.key}><img src={item.image} alt={item.name}/><div className="bag-item-details"><h3>{item.name}</h3><span>{item.color} · Size {item.size}</span><strong>{money(item.price)}</strong><div className="quantity"><button aria-label="Decrease quantity" onClick={() => changeQty(item.key,-1)}><Minus size={12}/></button><span>{item.qty}</span><button aria-label="Increase quantity" onClick={() => changeQty(item.key,1)}><Plus size={12}/></button></div></div><button className="remove-item" onClick={() => changeQty(item.key,-item.qty)}>Remove</button></div>)}</div><div className="bag-checkout"><div className="subtotal-row"><span>Subtotal</span><strong>{money(subtotal)}</strong></div><p>Shipping and taxes calculated at checkout.</p><button className="button button-dark checkout-button" onClick={() => announce('Checkout demo — connect a commerce provider to take payment.')}>Continue to checkout <ArrowRight size={16}/></button><button className="continue-shopping" onClick={() => setBagOpen(false)}>Keep browsing</button></div></>}</aside></div>}
+    {selected && <div className="scrim product-scrim" onClick={() => setSelected(null)}><section className="product-modal" onClick={e => e.stopPropagation()}><button className="icon-btn modal-close" aria-label="Close details" onClick={() => setSelected(null)}><X size={20}/></button><div className="modal-image"><img src={selected.image} alt={selected.name}/></div><div className="modal-content"><span className="eyebrow">{selected.type} / Made with care</span><h2>{selected.name}</h2><strong className="modal-price">{money(selected.price)}</strong><p>{selected.desc}</p><div className="modal-colour">Colour <span>{selected.color}</span><i style={{background:selected.shade}}></i></div><div className="size-heading"><span>Select a size</span><a href="#size-guide">Size guide</a></div><div className="sizes">{['XS','S','M','L','XL'].map(s=><button key={s} className={size===s?'size-selected':''} onClick={() => setSize(s)}>{s}</button>)}</div><button className="button button-dark add-button" onClick={() => addToBag(selected)}>{added?<><Check size={16}/> Added to bag</>:<>Add to bag <span>{money(selected.price)}</span></>}</button><div className="modal-footnote">Free shipping on orders over $150 <span>·</span> Easy 30-day returns</div><a className="modal-details" href="#details">Details & care <ArrowDown size={14}/></a></div></section></div>}
+    {notice && <div className="toast"><Check size={15}/>{notice}</div>}
+  </>;
+}
+
+createRoot(document.getElementById('root')).render(<App/>);
